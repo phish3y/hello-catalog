@@ -1,0 +1,13 @@
+[package]
+name = "hello-catalog"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aws-config = { version = "1.6.2", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "1.64.0"
+axum = "0.8.4"
+tokio = { version = "1.45.0", features = ["full"] }
+tower-http = { version = "0.6.2", features = ["full"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["json"] }

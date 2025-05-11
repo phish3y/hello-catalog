@@ -1,0 +1,28 @@
+services:
+
+  api_debug:
+    build:
+      context: .
+      dockerfile: debug.Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+
+  api_release:
+    build:
+      context: .
+      dockerfile: release.Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+
+  web:
+    build:
+      context: web
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api_debug
