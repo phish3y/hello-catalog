@@ -27,7 +27,7 @@ async fn main() {
         .route("/healthz", get(handlers::healthz))
         .route("/readyz", get(handlers::readyz))
         .route("/api/file/:id", get(handlers::get_file))
-        .route("/api/file/:id", put(handlers::put_file))
+        .route("/api/file", put(handlers::put_file))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 

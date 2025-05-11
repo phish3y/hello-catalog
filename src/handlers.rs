@@ -1,10 +1,9 @@
+use std::time::Instant;
+
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
+    body::Bytes, extract::{Path, Request, State}, http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, StatusCode}, response::IntoResponse, Json
 };
-use tracing::{span, Level, Span};
+use tracing::{info, span, Level, Span};
 
 use crate::model::{AppState, Repository};
 
@@ -26,8 +25,21 @@ pub async fn get_file<R: Repository>(
 
 pub async fn put_file<R: Repository>(
     State(state): State<AppState<R>>,
-    Path(id): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
 ) -> impl IntoResponse {
+    let start = Instant::now();
+
     let span: Span = span!(Level::INFO, "put_file", context = "put_file");
     let _e = span.enter();
+
+    let content_type: Option<&HeaderValue> = headers.get(CONTENT_TYPE);
+    if content_type != Some(&"application/zip".parse().unwrap()) { // TODO 
+        return (StatusCode::UNSUPPORTED_MEDIA_TYPE).into_response();
+    }
+
+    // TODO
+
+    info!("elapsed: {}ms", start.elapsed().as_millis());
+    (StatusCode::CREATED).into_response()
 }
