@@ -1,6 +1,10 @@
-.PHONY: format-web
-format-web:
+.PHONY: fmt-web
+fmt-web:
 	cd web && npm run format
+
+.PHONY: fmt-api
+fmt-api:
+	cargo fmt
 
 .PHONY: run-web
 run-web:

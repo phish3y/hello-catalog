@@ -1,29 +1,27 @@
 use std::{fmt, future::Future, sync::Arc};
 
 use aws_config::SdkConfig;
+use aws_sdk_s3::{
+    operation::get_object::{builders::GetObjectFluentBuilder, GetObjectOutput},
+    primitives::{AggregatedBytes, ByteStream},
+};
 
 #[derive(Clone, Debug)]
 pub struct AppState<R: Repository> {
-  repo: Arc<R>
+    pub repo: Arc<R>,
 }
 
-impl<R: Repository> AppState<R> {
-
-}
+impl<R: Repository> AppState<R> {}
 
 pub trait Repository: Clone + Send + Sync + 'static {
-  fn get(&self, id: &str) -> impl Future<Output = Result<String, RepoError>> + Send;
+    fn get(&self, id: &str) -> impl Future<Output = Result<Vec<u8>, RepoError>> + Send;
 
-  fn put(
-      &self,
-      id: &str,
-      data: &str,
-  ) -> impl Future<Output = Result<(), RepoError>> + Send;
+    fn put(&self, id: &str, body: &[u8]) -> impl Future<Output = Result<(), RepoError>> + Send;
 }
 
 #[derive(Debug)]
 pub struct RepoError {
-    pub message: String
+    pub message: String,
 }
 
 impl fmt::Display for RepoError {
@@ -38,29 +36,66 @@ impl std::error::Error for RepoError {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct S3Repo {
-  client: aws_sdk_s3::Client
+    client: aws_sdk_s3::Client,
+    bucket: String,
 }
 
 impl S3Repo {
-  pub async fn new() -> Self {
-    let config: SdkConfig = aws_config::load_from_env().await;
-    let client: aws_sdk_s3::Client = aws_sdk_s3::Client::new(&config);
-  
-    Self{client}
-  }
+    pub async fn new(bucket: String) -> Self {
+        let config: SdkConfig = aws_config::load_from_env().await;
+        let client: aws_sdk_s3::Client = aws_sdk_s3::Client::new(&config);
+
+        Self { client, bucket }
+    }
 }
 
 impl Repository for S3Repo {
-  fn get(&self, id: &str) -> impl Future<Output = Result<String, RepoError>> + Send {
-      
-  }
+    fn get(&self, id: &str) -> impl Future<Output = Result<Vec<u8>, RepoError>> + Send {
+        async move {
+            let key: String = format!("{}/{}.zip", id, id);
 
-  fn put(
-        &self,
-        id: &str,
-        data: &str,
-    ) -> impl Future<Output = Result<(), RepoError>> + Send {
-      
-  }
+            let req: GetObjectFluentBuilder =
+                self.client.get_object().bucket(&self.bucket).key(&key);
+
+            let resp: GetObjectOutput = req.send().await.map_err(|err| {
+                if let Some(svc_err) = err.as_service_error() {
+                    if svc_err.is_no_such_key() {
+                        return RepoError {
+                            message: format!("object not found: {}", key),
+                        };
+                    }
+                }
+
+                RepoError {
+                    message: format!("failed to get object: {}, {}", key, err),
+                }
+            })?;
+
+            let bytes: AggregatedBytes = resp.body.collect().await.map_err(|err| RepoError {
+                message: format!("failed to collect object body: {}, {}", key, err),
+            })?;
+
+            Ok(bytes.into_bytes().to_vec())
+        }
+    }
+
+    fn put(&self, id: &str, body: &[u8]) -> impl Future<Output = Result<(), RepoError>> + Send {
+        async move {
+            let key: String = format!("{}/{}.zip", id, id);
+            self.client
+                .put_object()
+                .bucket(&self.bucket)
+                .key(&key)
+                .body(ByteStream::from(body.to_vec()))
+                .send()
+                .await
+                .map_err(|err| RepoError {
+                    message: format!("failed to put object: {}, {}", key, err),
+                })?;
+
+            Ok(())
+        }
+    }
 }

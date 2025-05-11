@@ -1,5 +1,10 @@
+use std::sync::Arc;
 
-use axum::{routing::{get, put}, Router};
+use axum::{
+    routing::{get, put},
+    Router,
+};
+use model::{AppState, S3Repo};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::{info, span, Level};
@@ -15,12 +20,16 @@ async fn main() {
 
     let port = std::env::var("PORT").unwrap_or("3000".to_string());
 
+    let state: AppState<S3Repo> = AppState {
+        repo: Arc::new(S3Repo::new("".to_string()).await),
+    };
     let app = Router::new()
         .route("/healthz", get(handlers::healthz))
         .route("/readyz", get(handlers::readyz))
-        .route("/api/file", put(handlers::put_file))
-        .layer(TraceLayer::new_for_http());
-        // .with_state(model::AppState::new().await);
+        .route("/api/file/:id", get(handlers::get_file))
+        .route("/api/file/:id", put(handlers::put_file))
+        .layer(TraceLayer::new_for_http())
+        .with_state(state);
 
     let addr = format!("0.0.0.0:{}", port);
     info!("API at: {}", addr);
