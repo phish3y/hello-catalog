@@ -7,7 +7,7 @@ use axum::{
 use model::{AppState, S3Repo};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use tracing::{info, span, Level};
+use tracing::{info, span, Level, Span};
 
 mod handlers;
 mod model;
@@ -15,13 +15,14 @@ mod model;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt().json().init();
-    let span = span!(Level::INFO, "main", context = "main");
+    let span: Span = span!(Level::INFO, "main", context = "main");
     let _e = span.enter();
 
-    let port = std::env::var("PORT").unwrap_or("3000".to_string());
+    let port: String = std::env::var("PORT").unwrap_or("3000".to_string());
+    let bucket: String = std::env::var("BUCKET").unwrap();
 
     let state: AppState<S3Repo> = AppState {
-        repo: Arc::new(S3Repo::new("".to_string()).await),
+        repo: Arc::new(S3Repo::new(bucket).await),
     };
     let app = Router::new()
         .route("/healthz", get(handlers::healthz))
@@ -31,9 +32,9 @@ async fn main() {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    let addr = format!("0.0.0.0:{}", port);
+    let addr: String = format!("0.0.0.0:{}", port);
     info!("API at: {}", addr);
-    let listener = TcpListener::bind(addr)
+    let listener: TcpListener = TcpListener::bind(addr)
         .await
         .expect("failed to create tcp listener");
     axum::serve(listener, app)
