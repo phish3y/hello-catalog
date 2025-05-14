@@ -8,7 +8,7 @@ fmt-api:
 
 .PHONY: run
 run:
-	docker compose up --build proxy
+	docker compose up --build
 
 .PHONY: down
 down:

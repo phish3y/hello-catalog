@@ -13,20 +13,6 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=us-west-2
-      
-  api_release:
-    build:
-      context: .
-      dockerfile: release.Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - RUST_LOG=info
-      - PORT=3000
-      - BUCKET=hello-catalog
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=us-west-2
 
   web:
     build:
@@ -46,4 +32,3 @@ services:
     depends_on:
       - web
       - api_debug
-      

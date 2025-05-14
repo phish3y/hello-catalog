@@ -32,9 +32,26 @@
       <button
         @click="handleSave"
         :disabled="!file"
-        class="bg-green-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-700"
+        :class="[
+          'px-4 py-2 rounded',
+          file
+            ? 'bg-green-600 text-white cursor-pointer hover:bg-blue-700'
+            : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+        ]"
       >
         Save
+      </button>
+      <button
+        @click="handleClear"
+        :disabled="!file"
+        :class="[
+          'px-4 py-2 rounded',
+          file
+            ? 'bg-green-600 text-white cursor-pointer hover:bg-blue-700'
+            : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+        ]"
+      >
+        Clear
       </button>
     </div>
 
@@ -88,11 +105,11 @@ export default {
     return {
       zoom: 2,
       center: [47.41322, -1.219482] as PointTuple,
+      map: null as L.Map | null,
       schema: [] as string[],
       file: null as File | null,
       geojsonFeatures: null as Feature<Geometry, GeoJsonProperties>[] | null,
       bbox: null as LatLngBoundsExpression | null,
-      map: null as L.Map | null,
     }
   },
 
@@ -165,25 +182,33 @@ export default {
 
     async handleSave() {
       try {
-        const response = await fetch('/api/file/save', {
+        const response = await fetch('/api/file', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/zip',
           },
           body: this.file,
-        });
+        })
 
         if (!response.ok) {
-          throw new Error(`server error: ${response.status}`);
+          throw new Error(`server error: ${response.status}`)
         }
       } catch (error) {
-        console.error(error);
+        console.error(error)
         alert('Failed to save file')
       }
     },
+
+    async handleClear() {
+      this.zoom = 2
+      this.schema = []
+      this.file = null
+      this.geojsonFeatures = null
+      this.bbox = null
+    },
   },
 
-  computed: {
+  computed: { // TODO when to use computed?
     geoJsonOptions(): GeoJSONOptions {
       return {
         onEachFeature: (feature: Feature<Geometry, GeoJsonProperties>, layer: Layer) => {
