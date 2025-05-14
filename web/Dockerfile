@@ -14,6 +14,7 @@ FROM nginx:1.26-bookworm
 RUN rm -rf /usr/share/nginx/html/*
 
 COPY nginx/web.conf /etc/nginx/conf.d/web.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 3001
 

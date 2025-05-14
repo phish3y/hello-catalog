@@ -6,10 +6,10 @@ fmt-web:
 fmt-api:
 	cargo fmt
 
-.PHONY: run-web
-run-web:
-	docker compose up --build web
+.PHONY: run
+run:
+	docker compose up --build proxy
 
-.PHONY: run-api
-run-api:
-	docker compose up --build api_debug
+.PHONY: down
+down:
+	docker compose down

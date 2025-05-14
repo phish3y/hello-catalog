@@ -31,6 +31,7 @@
 
       <button
         @click="handleSave"
+        :disabled="!file"
         class="bg-green-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-700"
       >
         Save
@@ -88,6 +89,7 @@ export default {
       zoom: 2,
       center: [47.41322, -1.219482] as PointTuple,
       schema: [] as string[],
+      file: null as File | null,
       geojsonFeatures: null as Feature<Geometry, GeoJsonProperties>[] | null,
       bbox: null as LatLngBoundsExpression | null,
       map: null as L.Map | null,
@@ -118,6 +120,8 @@ export default {
         alert('Please upload a valid zipped shp')
         return
       }
+
+      this.file = file
 
       try {
         const arrayBuffer: ArrayBuffer = await file.arrayBuffer()
@@ -161,24 +165,17 @@ export default {
 
     async handleSave() {
       try {
-        const response = await fetch('http://api_debug:3000/api/save', {
-          method: 'GET',
+        const response = await fetch('/api/file/save', {
+          method: 'PUT',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/zip',
           },
-          // body: JSON.stringify({
-          //   name: this.form.name,
-          //   description: this.form.description,
-          // }),
+          body: this.file,
         });
 
-        console.log(response)
-    // if (!response.ok) {
-    //   throw new Error(`Server error: ${response.status}`);
-    // }
-
-    // const data = await response.json();
-    // console.log('Save successful:', data);
+        if (!response.ok) {
+          throw new Error(`server error: ${response.status}`);
+        }
       } catch (error) {
         console.error(error);
         alert('Failed to save file')

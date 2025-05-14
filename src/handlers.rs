@@ -32,6 +32,7 @@ pub async fn get_file<R: Repository>(
     let _e = span.enter();
 
     let file: Vec<u8> = match state.repo.get(&id).await {
+        // TODO 404
         Err(err) => {
             error!(error.kind="get", error.message = %err, %id, "failed");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
