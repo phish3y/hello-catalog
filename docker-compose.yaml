@@ -33,6 +33,17 @@ services:
       context: web
       dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "3001:3001"
     depends_on:
       - api_debug
+
+  proxy:
+    image: nginx:1.26-bookworm
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+      - api_debug
+      
