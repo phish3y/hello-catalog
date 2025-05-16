@@ -5,18 +5,24 @@ use aws_sdk_s3::{
     operation::get_object::{builders::GetObjectFluentBuilder, GetObjectOutput},
     primitives::{AggregatedBytes, ByteStream},
 };
+use rdkafka::{producer::FutureProducer, ClientConfig};
 
 #[derive(Clone, Debug)]
-pub struct AppState<R: Repository> {
+pub struct AppState<R: Repository, N: Notifier> {
     pub repo: Arc<R>,
+    pub notifier: Arc<N>,
 }
 
-impl<R: Repository> AppState<R> {}
+impl<R: Repository, N: Notifier> AppState<R, N> {}
 
 pub trait Repository: Clone + Send + Sync + 'static {
     fn get(&self, id: &str) -> impl Future<Output = Result<Vec<u8>, RepoError>> + Send;
 
     fn put(&self, id: &str, body: &[u8]) -> impl Future<Output = Result<(), RepoError>> + Send;
+}
+
+pub trait Notifier: Clone + Send + Sync + 'static {
+    fn send(&self) -> impl Future<Output = Result<(), NotifierError>> + Send;
 }
 
 #[derive(Debug)]
@@ -36,7 +42,24 @@ impl std::error::Error for RepoError {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
+pub struct NotifierError {
+    pub message: String,
+}
+
+impl fmt::Display for NotifierError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for NotifierError {
+    fn description(&self) -> &str {
+        &self.message
+    }
+}
+
+#[derive(Clone)]
 pub struct S3Repo {
     client: aws_sdk_s3::Client,
     bucket: String,
@@ -97,5 +120,30 @@ impl Repository for S3Repo {
 
             Ok(())
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct KafkaNotifier {
+    producer: FutureProducer,
+}
+
+impl KafkaNotifier {
+    pub async fn new(kafka_brokers: &str) -> Result<Self, NotifierError> {
+        let producer: FutureProducer = ClientConfig::new()
+            .set("bootstrap.servers", kafka_brokers)
+            // .set("message.timeout.ms", "5000")
+            .create()
+            .map_err(|err| NotifierError {
+                message: format!("failed to crfeate kafka producer: {}", err),
+            })?;
+
+        Ok(Self { producer })
+    }
+}
+
+impl Notifier for KafkaNotifier {
+    fn send(&self) -> impl Future<Output = Result<(), NotifierError>> + Send {
+        async move { todo!() }
     }
 }

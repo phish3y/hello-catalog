@@ -10,6 +10,10 @@ fmt-api:
 run:
 	docker compose up --build
 
+.PHONY: build
+build:
+	docker compose build
+
 .PHONY: down
 down:
 	docker compose down

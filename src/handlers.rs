@@ -10,7 +10,7 @@ use axum::{
 use tracing::{error, info, span, warn, Level, Span};
 use uuid::Uuid;
 
-use crate::model::{AppState, Repository};
+use crate::model::{AppState, Notifier, Repository};
 
 const ZIP_TYPE: &str = "application/zip";
 
@@ -22,8 +22,8 @@ pub async fn readyz() -> impl IntoResponse {
     (StatusCode::OK, Json({}))
 }
 
-pub async fn get_file<R: Repository>(
-    State(state): State<AppState<R>>,
+pub async fn get_file<R: Repository, N: Notifier>(
+    State(state): State<AppState<R, N>>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let start: Instant = Instant::now();
@@ -47,8 +47,8 @@ pub async fn get_file<R: Repository>(
     (StatusCode::OK, headers, Bytes::from(file)).into_response()
 }
 
-pub async fn put_file<R: Repository>(
-    State(state): State<AppState<R>>,
+pub async fn put_file<R: Repository, N: Notifier>(
+    State(state): State<AppState<R, N>>,
     headers: HeaderMap,
     body: Bytes,
 ) -> impl IntoResponse {

@@ -5,7 +5,7 @@ use axum::{
     routing::{get, put},
     Router,
 };
-use model::{AppState, S3Repo};
+use model::{AppState, KafkaNotifier, S3Repo};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::{info, span, Level, Span};
@@ -20,14 +20,25 @@ async fn main() {
     let _e = span.enter();
 
     let port: String = std::env::var("PORT").unwrap_or("3000".to_string());
-    let bucket: String = std::env::var("BUCKET").unwrap();
+    let bucket: String = std::env::var("BUCKET").expect("failed to parse env var BUCKET: required");
     let body_limit: usize = std::env::var("BODY_LIMIT_MB")
         .unwrap_or("20".to_string())
         .parse()
-        .unwrap();
+        .expect("failed to parse env var BODY_LIMIT_MB: must be usize");
+    let kafka_brokers: String =
+        std::env::var("KAFKA_BROKERS").expect("failed to parse env var KAFKA_BROKERS: required");
 
-    let state: AppState<S3Repo> = AppState {
+    info!(info.kind = "main", %bucket, "bucket");
+    info!(info.kind = "main", %body_limit, "body limit");
+    info!(info.kind = "main", %kafka_brokers, "kafka brokers");
+
+    let state: AppState<S3Repo, KafkaNotifier> = AppState {
         repo: Arc::new(S3Repo::new(bucket).await),
+        notifier: Arc::new(
+            KafkaNotifier::new(&kafka_brokers)
+                .await
+                .expect("failed to create kafka notifier"),
+        ),
     };
     let app = Router::new()
         .route("/healthz", get(handlers::healthz))
@@ -41,7 +52,7 @@ async fn main() {
         .with_state(state);
 
     let addr: String = format!("0.0.0.0:{}", port);
-    info!("API at: {}", addr);
+    info!(info.kind = "main", %addr, "api started");
     let listener: TcpListener = TcpListener::bind(addr)
         .await
         .expect("failed to create tcp listener");
